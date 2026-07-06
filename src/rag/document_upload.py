@@ -12,7 +12,7 @@ from src.rag.document_loader import (load_pdf_document,load_txt_document,)
 from src.rag.text_splitter import (split_documents,)
 from fastapi import HTTPException, UploadFile, status #UploadFile Represents a class of uploaded file from multipart form data with prefined functions
 from src.core.logger import logger
-
+from src.rag.index_documents import index_documents
 ALLOWED_EXTENSIONS = {".pdf", ".txt"}
 UPLOAD_DIR = Path(gettempdir()) / "adaptive_rag_uploads" # documents are Saved temporarily in /tmp/adaptive_rag_uploads
 
@@ -94,7 +94,7 @@ async def save_uploaded_document(file: UploadFile) -> Path:   # input in the pos
     finally:
         await file.close()
 
-def process_document(file_path: str,):
+def process_document(file_path: str,filename: str,description: str,):
     """
     Load and split document.
 
@@ -111,5 +111,11 @@ def process_document(file_path: str,):
     else:
         documents = load_txt_document(file_path,)
 
-    chunks = split_documents(documents,)
+    chunks = split_documents(documents)
+    for chunk in chunks:
+        chunk.metadata["filename"] = filename
+        chunk.metadata["description"] = description
+        if "page" not in chunk.metadata: # This code checks whether the metadata dictionary contains a default "page" key, and if it doesn't, it adds one with value 0.
+            chunk.metadata["page"] = 0
+    index_documents(chunks)
     return chunks

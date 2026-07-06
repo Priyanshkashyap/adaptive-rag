@@ -7,6 +7,7 @@ from src.rag.document_upload import process_document
 from src.core.logger import logger
 from src.models.upload import DocumentUploadResponse
 from src.rag.document_upload import save_uploaded_document
+from src.db.qdrant import get_qdrant_client
 
 router = APIRouter()
 
@@ -24,6 +25,18 @@ async def get_status() -> dict[str, str]:
         "service": "adaptive-rag",
     }
 
+@router.get("/qdrant")
+async def qdrant_health():
+    """
+    Check qdrant connection.
+    """
+
+    client = get_qdrant_client()
+    client.get_collections()
+
+    return {
+        "status": "connected"
+    }
 
 @router.post("/documents/upload", response_model=DocumentUploadResponse) # The response returned by this endpoint will have the structure defined by DocumentUploadResponse
 async def upload_document(file: UploadFile = File(...), x_description: str | None = Header(default=None, alias="X-Description"),) -> DocumentUploadResponse: # file(...) means required param.read from header a strng value or none.If the header is missing, set the variable to None.The HTTP header name is X-Description, even though the Python variable is called x_description as "-" is not allowed
@@ -47,9 +60,9 @@ async def upload_document(file: UploadFile = File(...), x_description: str | Non
         )
 
     temp_path = await save_uploaded_document(file)
-    chunks = process_document(str(temp_path))
+    chunks = process_document(file_path=str(temp_path),filename=file.filename or "unknown",description=x_description,)
+    
     logger.info("Generated %d chunks",len(chunks),)
-
     logger.info("Upload completed for file=%s", file.filename)
 
     return DocumentUploadResponse(
