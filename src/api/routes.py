@@ -3,11 +3,13 @@ API route definitions for Adaptive RAG.
 """
 
 from fastapi import APIRouter, File, Header, HTTPException, UploadFile, status
-from src.rag.document_upload import process_document
+
 from src.core.logger import logger
+from src.models.query import QueryRequest
+from src.models.query_response import QueryResponse
 from src.models.upload import DocumentUploadResponse
-from src.rag.document_upload import save_uploaded_document
-from src.db.qdrant import get_qdrant_client
+from src.rag.document_upload import process_document, save_uploaded_document
+from src.rag.query_service import answer_from_documents
 
 router = APIRouter()
 
@@ -18,57 +20,76 @@ async def get_status() -> dict[str, str]:
     Check API status.
 
     Returns:
-        A simple status response.
+        Status response.
     """
     return {
         "status": "running",
         "service": "adaptive-rag",
     }
 
-@router.get("/qdrant")
-async def qdrant_health():
-    """
-    Check qdrant connection.
-    """
 
-    client = get_qdrant_client()
-    client.get_collections()
-
-    return {
-        "status": "connected"
-    }
-
-@router.post("/documents/upload", response_model=DocumentUploadResponse) # The response returned by this endpoint will have the structure defined by DocumentUploadResponse
-async def upload_document(file: UploadFile = File(...), x_description: str | None = Header(default=None, alias="X-Description"),) -> DocumentUploadResponse: # file(...) means required param.read from header a strng value or none.If the header is missing, set the variable to None.The HTTP header name is X-Description, even though the Python variable is called x_description as "-" is not allowed
+@router.post("/documents/upload", response_model=DocumentUploadResponse)
+async def upload_document(
+    file: UploadFile = File(...),
+    x_description: str | None = Header(default=None, alias="X-Description"),
+) -> DocumentUploadResponse:
     """
-    Upload a PDF or TXT document and save it temporarily.
+    Upload a document, save it temporarily, load it, and chunk it.
 
     Args:
-        file: Uploaded document.
-        x_description: Description passed through the X-Description header.
+        file:
+            Uploaded document.
+        x_description:
+            Description provided in the header.
 
     Returns:
-        Upload response with saved path and metadata.
-
-    Raises:
-        HTTPException: If description is missing or file upload fails.
+        Upload response.
     """
-    if not x_description or not x_description.strip(): # strip() removes whitespace from the beginning and end of a string.
+    if not x_description or not x_description.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="X-Description header is required.",
         )
 
     temp_path = await save_uploaded_document(file)
-    chunks = process_document(file_path=str(temp_path),filename=file.filename or "unknown",description=x_description,)
-    
-    logger.info("Generated %d chunks",len(chunks),)
+
+    chunks = process_document(
+        file_path=str(temp_path),
+        filename=file.filename or "unknown",
+        description=x_description.strip(),
+    )
+
     logger.info("Upload completed for file=%s", file.filename)
 
     return DocumentUploadResponse(
-    status=True,
-    filename=file.filename or "unknown",
-    temp_path=str(temp_path),
-    description=x_description.strip(),
-    chunk_count=len(chunks),
+        status=True,
+        filename=file.filename or "unknown",
+        temp_path=str(temp_path),
+        description=x_description.strip(),
+        chunk_count=len(chunks),
+    )
+
+
+@router.post("/query", response_model=QueryResponse)
+async def query_document(request: QueryRequest) -> QueryResponse:
+    """
+    Query uploaded documents using retrieve -> generate flow.
+
+    Args:
+        request:
+            Query request containing question and session ID.
+
+    Returns:
+        Query response with answer and sources.
+    """
+    result = answer_from_documents(request.query)
+
+    return QueryResponse(
+    status="success",
+    confidence=result.confidence,
+    session_id=request.session_id,
+    question=request.query,
+    answer=result.answer,
+    source_count=result.source_count,
+    sources=result.sources,
 )

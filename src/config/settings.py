@@ -13,7 +13,6 @@ class Settings(BaseSettings):
 
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen3:8b"
-    embedding_model: str = "nomic-embed-text"
     tavily_api_key: str = ""
     embedding_model: str = "nomic-embed-text"
     qdrant_url: str = ""

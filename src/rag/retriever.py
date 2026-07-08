@@ -3,7 +3,6 @@ Retriever helpers.
 """
 
 from langchain_core.vectorstores import VectorStoreRetriever
-
 from src.core.logger import logger
 from src.db.vector_store import get_vector_store
 from src.config.settings import settings
