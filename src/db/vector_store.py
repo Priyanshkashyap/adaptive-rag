@@ -1,15 +1,14 @@
 """
 Qdrant vector store helpers.
 """
-
+from qdrant_client.models import Distance
+from qdrant_client.models import VectorParams
 from langchain_qdrant import QdrantVectorStore
-
 from src.config.settings import settings
 from src.db.qdrant import get_qdrant_client
 from src.embeddings.ollama_embeddings import get_embeddings
 
-
-def get_vector_store() -> QdrantVectorStore: # its like jpa uses entity and entity manager to talk to postgres sql
+def get_vector_store() -> QdrantVectorStore:
     """
     Create Qdrant vector store.
 
@@ -17,8 +16,26 @@ def get_vector_store() -> QdrantVectorStore: # its like jpa uses entity and enti
         Configured vector store.
     """
 
+    client = get_qdrant_client()
+    collections = client.get_collections()
+
+    names = [ # eg. ["users", "books", "notes"]
+        collection.name
+        for collection in collections.collections
+    ]
+
+    if settings.qdrant_collection not in names: # if not in env
+
+        client.create_collection( # create new
+            collection_name=settings.qdrant_collection,
+            vectors_config=VectorParams(
+                size=768, # max 768 numbers in. a vector size
+                distance=Distance.COSINE,
+            ),
+        )
+
     return QdrantVectorStore(
-        client=get_qdrant_client(),
+        client=client,
         collection_name=settings.qdrant_collection,
         embedding=get_embeddings(),
     )

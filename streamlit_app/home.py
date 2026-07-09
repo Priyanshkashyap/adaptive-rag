@@ -1,18 +1,45 @@
 """
 Adaptive RAG UI.
 """
+
 import streamlit as st
-from streamlit_app.components.chat import (render_chat,)
-from streamlit_app.components.sidebar import (render_sidebar,)
-from streamlit_app.utils.session import (initialize_session,)
+from components.sidebar import render_sidebar
+from components.chat import render_chat
+from utils.api_client import (ask_question,upload_document,)
+from utils.session import (initialize_session,)
 
 st.set_page_config(page_title="Adaptive RAG",page_icon="🤖",layout="wide",)
-
 initialize_session()
-render_sidebar()
+uploaded_file, description = render_sidebar()
 render_chat()
 
-prompt = st.chat_input("Ask something...")
+if uploaded_file:
+
+    if st.button("Upload"):
+
+        with st.spinner(
+            "Uploading..."
+        ):
+
+            try:
+
+                result = upload_document(
+                    uploaded_file,
+                    description,
+                )
+
+                st.success(
+                    f"{result['filename']} uploaded successfully."
+                )
+
+            except Exception as error:
+
+                st.error(str(error))
+
+
+prompt = st.chat_input(
+    "Ask something..."
+)
 
 if prompt:
 
@@ -23,13 +50,27 @@ if prompt:
         }
     )
 
+    with st.spinner(
+        "Thinking..."
+    ):
+
+        try:
+
+            response = ask_question(
+                prompt,
+                st.session_state.session_id,
+            )
+
+            answer = response["answer"]
+
+        except Exception as error:
+
+            answer = str(error)
+
     st.session_state.messages.append(
         {
             "role": "assistant",
-            "content": (
-                "Backend integration "
-                "will be added on Day 15."
-            ),
+            "content": answer,
         }
     )
 

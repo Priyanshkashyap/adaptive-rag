@@ -3,7 +3,7 @@ API route definitions for Adaptive RAG.
 """
 
 from fastapi import APIRouter, File, Header, HTTPException, UploadFile, status
-
+from src.rag.query_classifier import classify_query
 from src.core.logger import logger
 from src.models.query import QueryRequest
 from src.models.query_response import QueryResponse
@@ -82,6 +82,8 @@ async def query_document(request: QueryRequest) -> QueryResponse:
     Returns:
         Query response with answer and sources.
     """
+    route = classify_query(request.query,)
+    logger.info("Query route=%s",route.route,)
     result = answer_from_documents(request.query)
 
     return QueryResponse(

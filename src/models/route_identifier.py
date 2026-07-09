@@ -2,16 +2,15 @@
 Query route classification model.
 """
 
+from typing import Literal
 from pydantic import BaseModel
-
 
 class RouteIdentifier(BaseModel):
     """
-    Route classification result.
-
-    Attributes:
-        route:
-            Query route type.
+    Query route classification result.
     """
-
-    route: str
+    route: Literal[
+        "INDEX",
+        "GENERAL",
+        "SEARCH",
+    ]
