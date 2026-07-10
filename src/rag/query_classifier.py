@@ -24,7 +24,7 @@ def classify_query(question: str,) -> RouteIdentifier:
     structured_llm = llm.with_structured_output(RouteIdentifier,)
     chain = (CLASSIFIER_PROMPT | structured_llm)
 
-    result = cast(RouteIdentifier,chain.invoke( # type casting
+    result = cast(RouteIdentifier,chain.invoke( # Trust me. I know this object is a RouteIdentifier. as by default return type of invoke method is Any.
         {
             "question": question,
         }

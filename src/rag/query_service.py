@@ -4,7 +4,6 @@ Query answering service.
 This module performs the simple flow:
 question -> retrieve -> generate.
 """
-
 from langchain_core.documents import Document # contains page content and metadata
 from langchain_core.messages import AIMessage # The LLM doesn't return a string directly.has content inside 
 from src.core.logger import logger
@@ -39,7 +38,6 @@ def _build_context(documents: list[Document],) -> str: # This converts retrieved
         context_parts.append(f"{header}\n{document.page_content}")
     return "\n\n".join(context_parts)
 
-
 def _build_sources(documents: list[Document],) -> list[SourceChunk]: # give to frontend only parts of chunk thats required
     """
     Build source metadata.
@@ -73,9 +71,7 @@ def _build_sources(documents: list[Document],) -> list[SourceChunk]: # give to f
 
     return sources
 
-def _calculate_confidence(
-    source_count: int,
-) -> float:
+def _calculate_confidence(source_count: int,) -> float:
     """
     Calculate a simple confidence score.
 
@@ -86,19 +82,14 @@ def _calculate_confidence(
     Returns:
         Confidence score.
     """
-
     if source_count >= 5:
         return 0.95
-
     if source_count == 4:
         return 0.90
-
     if source_count == 3:
         return 0.85
-
     if source_count == 2:
         return 0.75
-
     if source_count == 1:
         return 0.60
 

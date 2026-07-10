@@ -10,9 +10,10 @@ from src.models.query_response import QueryResponse
 from src.models.upload import DocumentUploadResponse
 from src.rag.document_upload import process_document, save_uploaded_document
 from src.rag.query_service import answer_from_documents
+from src.rag.general_service import answer_general_question
+from src.rag.search_service import answer_from_search
 
 router = APIRouter()
-
 
 @router.get("/status")
 async def get_status() -> dict[str, str]:
@@ -26,7 +27,6 @@ async def get_status() -> dict[str, str]:
         "status": "running",
         "service": "adaptive-rag",
     }
-
 
 @router.post("/documents/upload", response_model=DocumentUploadResponse)
 async def upload_document(
@@ -84,8 +84,14 @@ async def query_document(request: QueryRequest) -> QueryResponse:
     """
     route = classify_query(request.query,)
     logger.info("Query route=%s",route.route,)
-    result = answer_from_documents(request.query)
-
+    if route.route == "INDEX":
+        result = answer_from_documents(request.query)
+    elif route.route == "GENERAL":
+        result = answer_general_question(request.query,)
+    elif route.route == "SEARCH":
+        result = answer_from_search(request.query,)
+    else:
+        raise HTTPException(status_code=400,detail="Unknown route.",)
     return QueryResponse(
     status="success",
     confidence=result.confidence,
