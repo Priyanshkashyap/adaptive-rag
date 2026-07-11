@@ -2,18 +2,22 @@
 Query answering service.
 
 This module performs the simple flow:
-question -> retrieve -> generate.
+question -> retrieve -> grade -> generate.
 """
-from langchain_core.documents import Document # contains page content and metadata
-from langchain_core.messages import AIMessage # The LLM doesn't return a string directly.has content inside 
+
+from langchain_core.documents import Document
+from langchain_core.messages import AIMessage
+
 from src.core.logger import logger
 from src.llms.ollama_client import get_llm
 from src.models.query_response import SourceChunk
 from src.models.query_result import QueryResult
 from src.prompts.answer import ANSWER_PROMPT
+from src.rag.document_grader import grade_documents
 from src.rag.retriever import get_retriever
 
-def _build_context(documents: list[Document],) -> str: # This converts retrieved chunks into one long string.
+
+def _build_context(documents: list[Document]) -> str:
     """
     Convert retrieved documents into a single prompt context.
 
@@ -29,16 +33,22 @@ def _build_context(documents: list[Document],) -> str: # This converts retrieved
 
     context_parts: list[str] = []
 
-    for index, document in enumerate(documents,start=1,):
+    for index, document in enumerate(documents, start=1):
+        filename = document.metadata.get("filename", "unknown")
+        page = document.metadata.get("page", "unknown")
+        description = document.metadata.get("description", "unknown")
 
-        filename = document.metadata.get("filename","unknown",)
-        page = document.metadata.get("page","unknown",)
-        description = document.metadata.get("description","unknown",)
-        header = f"[Chunk {index} | filename={filename} | page={page} | description={description}]"
+        header = (
+            f"[Chunk {index} | filename={filename} | "
+            f"page={page} | description={description}]"
+        )
+
         context_parts.append(f"{header}\n{document.page_content}")
+
     return "\n\n".join(context_parts)
 
-def _build_sources(documents: list[Document],) -> list[SourceChunk]: # give to frontend only parts of chunk thats required
+
+def _build_sources(documents: list[Document]) -> list[SourceChunk]:
     """
     Build source metadata.
 
@@ -52,32 +62,25 @@ def _build_sources(documents: list[Document],) -> list[SourceChunk]: # give to f
     sources: list[SourceChunk] = []
 
     for document in documents:
-
         sources.append(
-            SourceChunk( # creating object of this class
-                filename=document.metadata.get(
-                    "filename",
-                    "unknown",
-                ),
-                page=document.metadata.get(
-                    "page",
-                ),
-                description=document.metadata.get(
-                    "description",
-                ),
+            SourceChunk(
+                filename=document.metadata.get("filename", "unknown"),
+                page=document.metadata.get("page"),
+                description=document.metadata.get("description"),
                 preview=document.page_content[:250],
             )
         )
 
     return sources
 
-def _calculate_confidence(source_count: int,) -> float:
+
+def _calculate_confidence(source_count: int) -> float:
     """
     Calculate a simple confidence score.
 
     Args:
         source_count:
-            Number of retrieved chunks.
+            Number of relevant chunks.
 
     Returns:
         Confidence score.
@@ -95,9 +98,10 @@ def _calculate_confidence(source_count: int,) -> float:
 
     return 0.0
 
-def answer_from_documents(question: str,) -> QueryResult:
+
+def answer_from_documents(question: str) -> QueryResult:
     """
-    Retrieve relevant chunks and generate an answer.
+    Retrieve relevant chunks, grade them, and generate an answer.
 
     Args:
         question:
@@ -106,14 +110,29 @@ def answer_from_documents(question: str,) -> QueryResult:
     Returns:
         Generated answer with sources.
     """
+    logger.info("Running document query for question=%s", question)
 
-    logger.info("Running document query for question=%s",question,)
     retriever = get_retriever()
+    documents = retriever.invoke(question)
 
-    documents = retriever.invoke(question,)
-    context = _build_context(documents,)
+    relevant_documents = grade_documents(question, documents)
+    logger.info("Relevant chunks after grading=%d", len(relevant_documents))
+
+    if not relevant_documents:
+        return QueryResult(
+            answer=(
+                "I could not find relevant information in the "
+                "uploaded documents."
+            ),
+            source_count=0,
+            confidence=0.0,
+            sources=[],
+        )
+
+    context = _build_context(relevant_documents)
+
     llm = get_llm()
-    chain = ANSWER_PROMPT | llm # The | operator means "pipe the output of the left into the input of the right."
+    chain = ANSWER_PROMPT | llm
 
     response = chain.invoke(
         {
@@ -121,22 +140,23 @@ def answer_from_documents(question: str,) -> QueryResult:
             "context": context,
         }
     )
-    if not isinstance(response, AIMessage): # if they not of this exact type
+
+    if not isinstance(response, AIMessage):
         raise TypeError("Expected AIMessage from LLM.")
 
     if isinstance(response.content, str):
         answer_text = response.content
-    else: # llm will reply in either string or list form
-        parts = []
+    else:
+        parts: list[str] = []
         for part in response.content:
-            if isinstance(part, str):
-                 parts.append(part)
-            else:
-                parts.append(str(part))
+            parts.append(part if isinstance(part, str) else str(part))
         answer_text = "\n".join(parts)
 
-    source_count = len(documents)
+    source_count = len(relevant_documents)
 
-    return QueryResult(answer=answer_text,source_count=source_count,confidence=_calculate_confidence(source_count,),
-    sources=_build_sources(documents),
-)
+    return QueryResult(
+        answer=answer_text,
+        source_count=source_count,
+        confidence=_calculate_confidence(source_count),
+        sources=_build_sources(relevant_documents),
+    )
