@@ -4,10 +4,9 @@ Query answering service.
 This module performs the simple flow:
 question -> retrieve -> grade -> generate.
 """
-
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage
-
+from src.rag.query_rewriter import rewrite_query
 from src.core.logger import logger
 from src.llms.ollama_client import get_llm
 from src.models.query_response import SourceChunk
@@ -119,15 +118,16 @@ def answer_from_documents(question: str) -> QueryResult:
     logger.info("Relevant chunks after grading=%d", len(relevant_documents))
 
     if not relevant_documents:
-        return QueryResult(
-            answer=(
-                "I could not find relevant information in the "
-                "uploaded documents."
-            ),
-            source_count=0,
-            confidence=0.0,
-            sources=[],
-        )
+        logger.info("No relevant chunks found. Rewriting query.")
+        rewritten_question = rewrite_query(question,)
+        logger.info( "Rewritten question=%s",rewritten_question,)
+        documents = retriever.invoke(rewritten_question,)
+        relevant_documents = grade_documents(rewritten_question, documents,)
+        logger.info("Relevant chunks after retry=%d",len(relevant_documents),)
+        if not relevant_documents:
+            return QueryResult( answer=( "I could not find relevant ""information in the uploaded " "documents."),source_count=0,confidence=0.0,sources=[],)
+        
+    question = rewritten_question
 
     context = _build_context(relevant_documents)
 
