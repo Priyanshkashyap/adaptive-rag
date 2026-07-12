@@ -12,6 +12,8 @@ from src.rag.document_upload import process_document, save_uploaded_document
 from src.rag.query_service import answer_from_documents
 from src.rag.general_service import answer_general_question
 from src.rag.search_service import answer_from_search
+from src.memory.chat_history import save_message
+from src.memory.chat_history import load_messages
 
 router = APIRouter()
 
@@ -82,6 +84,7 @@ async def query_document(request: QueryRequest) -> QueryResponse:
     Returns:
         Query response with answer and sources.
     """
+    save_message(request.session_id,"user",request.query,)
     route = classify_query(request.query,)
     logger.info("Query route=%s",route.route,)
     if route.route == "INDEX":
@@ -92,6 +95,8 @@ async def query_document(request: QueryRequest) -> QueryResponse:
         result = answer_from_search(request.query,)
     else:
         raise HTTPException(status_code=400,detail="Unknown route.",)
+    
+    save_message(request.session_id,"assistant",result.answer,)
     return QueryResponse(
     status="success",
     confidence=result.confidence,
@@ -101,3 +106,19 @@ async def query_document(request: QueryRequest) -> QueryResponse:
     source_count=result.source_count,
     sources=result.sources,
 )
+
+@router.get(
+    "/history/{session_id}"
+)
+async def get_history(
+    session_id: str,
+):
+    """
+    Return chat history.
+    """
+
+    return {
+        "messages": load_messages(
+            session_id,
+        )
+    }

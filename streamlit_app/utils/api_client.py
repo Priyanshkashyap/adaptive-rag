@@ -67,3 +67,16 @@ def ask_question(question: str,session_id: str,) -> dict:
     )
     response.raise_for_status() #say reply wrt the status code received from backend
     return response.json() 
+
+def load_history(
+    session_id: str,
+) -> dict:
+
+    response = requests.get(
+        f"{BASE_URL}/history/{session_id}",
+        timeout=30,
+    )
+
+    response.raise_for_status()
+
+    return response.json()
