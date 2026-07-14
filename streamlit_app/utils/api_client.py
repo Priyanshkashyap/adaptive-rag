@@ -1,12 +1,49 @@
 """
 FastAPI client utilities.
 """
-import requests # This is Python's HTTP client library.It lets Python send HTTP requests just like a browser. meanwhile fasapi is for backend
-import streamlit as st
 
-BASE_URL = "http://127.0.0.1:8000/rag" # This is the base address of your FastAPI server. localhost gets converted to this only
+import requests
 
-def upload_document(uploaded_file,description: str,) -> dict:
+
+BASE_URL = "http://127.0.0.1:8000/rag"
+
+
+def _handle_response(
+    response: requests.Response,
+) -> dict:
+    """
+    Validate API response.
+
+    Args:
+        response:
+            HTTP response from FastAPI.
+
+    Returns:
+        Parsed JSON response.
+
+    Raises:
+        RuntimeError:
+            If the API returns an error.
+    """
+
+    if response.ok:
+        return response.json()
+
+    try:
+        detail = response.json().get(
+            "detail",
+            "Unknown server error.",
+        )
+    except Exception:
+        detail = "Unknown server error."
+
+    raise RuntimeError(detail)
+
+
+def upload_document(
+    uploaded_file,
+    description: str,
+) -> dict:
     """
     Upload document to FastAPI.
 
@@ -20,6 +57,7 @@ def upload_document(uploaded_file,description: str,) -> dict:
     Returns:
         Upload response.
     """
+
     files = {
         "file": (
             uploaded_file.name,
@@ -36,14 +74,18 @@ def upload_document(uploaded_file,description: str,) -> dict:
         f"{BASE_URL}/documents/upload",
         files=files,
         headers=headers,
-        timeout=60,
+        timeout=300,
     )
 
-    response.raise_for_status()
-    return response.json()
+    return _handle_response(
+        response,
+    )
 
 
-def ask_question(question: str,session_id: str,) -> dict:
+def ask_question(
+    question: str,
+    session_id: str,
+) -> dict:
     """
     Query FastAPI.
 
@@ -57,6 +99,7 @@ def ask_question(question: str,session_id: str,) -> dict:
     Returns:
         Query response.
     """
+
     response = requests.post(
         f"{BASE_URL}/query",
         json={
@@ -65,18 +108,31 @@ def ask_question(question: str,session_id: str,) -> dict:
         },
         timeout=120,
     )
-    response.raise_for_status() #say reply wrt the status code received from backend
-    return response.json() 
+
+    return _handle_response(
+        response,
+    )
+
 
 def load_history(
     session_id: str,
 ) -> dict:
+    """
+    Load chat history from FastAPI.
+
+    Args:
+        session_id:
+            Chat session identifier.
+
+    Returns:
+        Chat history.
+    """
 
     response = requests.get(
         f"{BASE_URL}/history/{session_id}",
         timeout=30,
     )
 
-    response.raise_for_status()
-
-    return response.json()
+    return _handle_response(
+        response,
+    )

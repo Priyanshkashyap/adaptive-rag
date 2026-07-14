@@ -2,20 +2,32 @@
 API route definitions for Adaptive RAG.
 """
 
-from fastapi import APIRouter, File, Header, HTTPException, UploadFile, status
-from src.rag.query_classifier import classify_query
+from fastapi import (
+    APIRouter,
+    File,
+    Header,
+    HTTPException,
+    UploadFile,
+    status,
+)
+
 from src.core.logger import logger
+from src.memory.chat_history import load_messages
+from src.memory.chat_history import save_message
 from src.models.query import QueryRequest
 from src.models.query_response import QueryResponse
 from src.models.upload import DocumentUploadResponse
-from src.rag.document_upload import process_document, save_uploaded_document
-from src.rag.query_service import answer_from_documents
+from src.rag.document_upload import (
+    process_document,
+    save_uploaded_document,
+)
 from src.rag.general_service import answer_general_question
+from src.rag.query_classifier import classify_query
+from src.rag.query_service import answer_from_documents
 from src.rag.search_service import answer_from_search
-from src.memory.chat_history import save_message
-from src.memory.chat_history import load_messages
 
 router = APIRouter()
+
 
 @router.get("/status")
 async def get_status() -> dict[str, str]:
@@ -30,85 +42,169 @@ async def get_status() -> dict[str, str]:
         "service": "adaptive-rag",
     }
 
-@router.post("/documents/upload", response_model=DocumentUploadResponse)
+
+@router.post(
+    "/documents/upload",
+    response_model=DocumentUploadResponse,
+)
 async def upload_document(
     file: UploadFile = File(...),
-    x_description: str | None = Header(default=None, alias="X-Description"),
+    x_description: str | None = Header(
+        default=None,
+        alias="X-Description",
+    ),
 ) -> DocumentUploadResponse:
     """
-    Upload a document, save it temporarily, load it, and chunk it.
+    Upload a document.
 
     Args:
         file:
             Uploaded document.
+
         x_description:
-            Description provided in the header.
+            User supplied description.
 
     Returns:
         Upload response.
     """
+
     if not x_description or not x_description.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="X-Description header is required.",
         )
 
-    temp_path = await save_uploaded_document(file)
+    try:
 
-    chunks = process_document(
-        file_path=str(temp_path),
-        filename=file.filename or "unknown",
-        description=x_description.strip(),
-    )
+        temp_path = await save_uploaded_document(file)
 
-    logger.info("Upload completed for file=%s", file.filename)
+        chunks = process_document(
+            file_path=str(temp_path),
+            filename=file.filename or "unknown",
+            description=x_description.strip(),
+        )
 
-    return DocumentUploadResponse(
-        status=True,
-        filename=file.filename or "unknown",
-        temp_path=str(temp_path),
-        description=x_description.strip(),
-        chunk_count=len(chunks),
-    )
+        logger.info(
+            "Upload completed for file=%s",
+            file.filename,
+        )
+
+        return DocumentUploadResponse(
+            status=True,
+            filename=file.filename or "unknown",
+            temp_path=str(temp_path),
+            description=x_description.strip(),
+            chunk_count=len(chunks),
+        )
+
+    except HTTPException: #just for normal http exceptions can have many things eg 404,401,etc.
+        raise
+
+    except Exception:
+
+        logger.exception(
+            "Document upload failed."
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, # 500 for sure
+            detail="Document upload failed.",
+        )
 
 
-@router.post("/query", response_model=QueryResponse)
-async def query_document(request: QueryRequest) -> QueryResponse:
+@router.post(
+    "/query",
+    response_model=QueryResponse,
+)
+async def query_document(
+    request: QueryRequest,
+) -> QueryResponse:
     """
-    Query uploaded documents using retrieve -> generate flow.
+    Query uploaded documents.
 
     Args:
         request:
-            Query request containing question and session ID.
+            User query request.
 
     Returns:
-        Query response with answer and sources.
+        Query response.
     """
-    save_message(request.session_id,"user",request.query,)
-    route = classify_query(request.query,)
-    logger.info("Query route=%s",route.route,)
-    if route.route == "INDEX":
-        result = answer_from_documents(request.query)
-    elif route.route == "GENERAL":
-        result = answer_general_question(request.query,)
-    elif route.route == "SEARCH":
-        result = answer_from_search(request.query,)
-    else:
-        raise HTTPException(status_code=400,detail="Unknown route.",)
-    
-    save_message(request.session_id,"assistant",result.answer,)
-    return QueryResponse(
-    status="success",
-    confidence=result.confidence,
-    session_id=request.session_id,
-    question=request.query,
-    answer=result.answer,
-    source_count=result.source_count,
-    sources=result.sources,
-)
+
+    try:
+
+        save_message(
+            request.session_id,
+            "user",
+            request.query,
+        )
+
+        route = classify_query(
+            request.query,
+        )
+
+        logger.info(
+            "Query route=%s",
+            route.route,
+        )
+
+        if route.route == "INDEX":
+
+            result = answer_from_documents(
+                request.query,
+            )
+
+        elif route.route == "GENERAL":
+
+            result = answer_general_question(
+                request.query,
+            )
+
+        elif route.route == "SEARCH":
+
+            result = answer_from_search(
+                request.query,
+            )
+
+        else:
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unknown route.",
+            )
+
+        save_message(
+            request.session_id,
+            "assistant",
+            result.answer,
+        )
+
+        return QueryResponse(
+            status="success",
+            confidence=result.confidence,
+            session_id=request.session_id,
+            question=request.query,
+            answer=result.answer,
+            source_count=result.source_count,
+            sources=result.sources,
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception:
+
+        logger.exception(
+            "Query execution failed."
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to answer query.",
+        )
+
 
 @router.get(
-    "/history/{session_id}"
+    "/history/{session_id}",
 )
 async def get_history(
     session_id: str,
@@ -117,8 +213,21 @@ async def get_history(
     Return chat history.
     """
 
-    return {
-        "messages": load_messages(
-            session_id,
+    try:
+
+        return {
+            "messages": load_messages(
+                session_id,
+            )
+        }
+
+    except Exception:
+
+        logger.exception(
+            "Failed to load chat history."
         )
-    }
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to load chat history.",
+        )
