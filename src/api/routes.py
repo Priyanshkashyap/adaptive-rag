@@ -21,10 +21,8 @@ from src.rag.document_upload import (
     process_document,
     save_uploaded_document,
 )
-from src.rag.general_service import answer_general_question
-from src.rag.query_classifier import classify_query
-from src.rag.query_service import answer_from_documents
-from src.rag.search_service import answer_from_search
+from src.graph.graph_builder import graph
+from src.graph.state import AdaptiveRAGState
 
 router = APIRouter()
 
@@ -120,88 +118,39 @@ async def query_document(
     request: QueryRequest,
 ) -> QueryResponse:
     """
-    Query uploaded documents.
-
-    Args:
-        request:
-            User query request.
-
-    Returns:
-        Query response.
+    Execute the LangGraph workflow.
     """
 
-    try:
+    save_message(
+        request.session_id,
+        "user",
+        request.query,
+    )
 
-        save_message(
-            request.session_id,
-            "user",
-            request.query,
-        )
+    initial_state: AdaptiveRAGState = {
+        "question": request.query,
+        "session_id": request.session_id,
+    }
 
-        route = classify_query(
-            request.query,
-        )
+    final_state = graph.invoke(
+        initial_state,
+    )
 
-        logger.info(
-            "Query route=%s",
-            route.route,
-        )
+    save_message(
+        request.session_id,
+        "assistant",
+        final_state["answer"],
+    )
 
-        if route.route == "INDEX":
-
-            result = answer_from_documents(
-                request.query,
-            )
-
-        elif route.route == "GENERAL":
-
-            result = answer_general_question(
-                request.query,
-            )
-
-        elif route.route == "SEARCH":
-
-            result = answer_from_search(
-                request.query,
-            )
-
-        else:
-
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unknown route.",
-            )
-
-        save_message(
-            request.session_id,
-            "assistant",
-            result.answer,
-        )
-
-        return QueryResponse(
-            status="success",
-            confidence=result.confidence,
-            session_id=request.session_id,
-            question=request.query,
-            answer=result.answer,
-            source_count=result.source_count,
-            sources=result.sources,
-        )
-
-    except HTTPException:
-        raise
-
-    except Exception:
-
-        logger.exception(
-            "Query execution failed."
-        )
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to answer query.",
-        )
-
+    return QueryResponse(
+        status="success",
+        confidence=final_state["confidence"],
+        session_id=request.session_id,
+        question=request.query,
+        answer=final_state["answer"],
+        source_count=final_state["source_count"],
+        sources=final_state["sources"],
+    )
 
 @router.get(
     "/history/{session_id}",
