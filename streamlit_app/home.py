@@ -34,9 +34,10 @@ if uploaded_file:
         with st.spinner("Uploading..."):
             try:
                 result = upload_document(
-                    uploaded_file,
-                    description,
-                )
+                uploaded_file,
+                description,
+                st.session_state.session_id,
+            )
                 st.success(
                     f"{result['filename']} uploaded successfully."
                 )

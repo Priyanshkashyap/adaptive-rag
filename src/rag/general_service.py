@@ -5,7 +5,7 @@ General knowledge answering service.
 from langchain_core.messages import AIMessage
 
 from src.core.logger import logger
-from src.llms.ollama_client import get_llm
+from src.llms.groq_client import get_llm
 from src.models.query_result import QueryResult
 from src.prompts.general import GENERAL_PROMPT
 

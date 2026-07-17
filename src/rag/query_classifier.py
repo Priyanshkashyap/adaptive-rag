@@ -2,7 +2,7 @@
 Query classification service.
 """
 from src.core.logger import logger
-from src.llms.ollama_client import get_llm
+from src.llms.groq_client import get_llm
 from src.models.route_identifier import RouteIdentifier
 from src.prompts.classifier import CLASSIFIER_PROMPT
 from typing import cast

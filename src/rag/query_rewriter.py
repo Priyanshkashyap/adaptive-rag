@@ -5,7 +5,7 @@ Query rewriting service.
 from langchain_core.messages import AIMessage
 
 from src.core.logger import logger
-from src.llms.ollama_client import get_llm
+from src.llms.groq_client import get_llm
 from src.prompts.rewrite import REWRITE_PROMPT
 
 

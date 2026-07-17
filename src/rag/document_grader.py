@@ -7,7 +7,7 @@ from typing import cast
 from langchain_core.documents import Document
 
 from src.core.logger import logger
-from src.llms.ollama_client import get_llm
+from src.llms.groq_client import get_llm
 from src.models.grade_result import GradeResult
 from src.prompts.grader import GRADER_PROMPT
 

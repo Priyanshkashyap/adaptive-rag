@@ -154,6 +154,7 @@ def process_document(
     file_path: str,
     filename: str,
     description: str,
+    session_id: str,
 ):
     """
     Load, split and index document.
@@ -198,6 +199,7 @@ def process_document(
 
             chunk.metadata["filename"] = filename
             chunk.metadata["description"] = description
+            chunk.metadata["session_id"] = session_id
 
             if "page" not in chunk.metadata:
 

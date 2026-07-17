@@ -43,6 +43,7 @@ def _handle_response(
 def upload_document(
     uploaded_file,
     description: str,
+    session_id: str,
 ) -> dict:
     """
     Upload document to FastAPI.
@@ -53,6 +54,9 @@ def upload_document(
 
         description:
             Document description.
+
+        session_id:
+            Current chat session.
 
     Returns:
         Upload response.
@@ -68,6 +72,7 @@ def upload_document(
 
     headers = {
         "X-Description": description,
+        "X-Session-Id": session_id,
     }
 
     response = requests.post(

@@ -47,9 +47,13 @@ async def get_status() -> dict[str, str]:
 )
 async def upload_document(
     file: UploadFile = File(...),
-    x_description: str | None = Header(
+    x_description: str |None = Header(
         default=None,
         alias="X-Description",
+    ),
+    x_session_id: str | None = Header(
+        default=None,
+        alias="X-Session-Id",
     ),
 ) -> DocumentUploadResponse:
     """
@@ -62,6 +66,9 @@ async def upload_document(
         x_description:
             User supplied description.
 
+        x_session_id:
+            Session identifier used for document isolation.
+
     Returns:
         Upload response.
     """
@@ -72,6 +79,12 @@ async def upload_document(
             detail="X-Description header is required.",
         )
 
+    if not x_session_id or not x_session_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="X-Session-Id header is required.",
+        )
+
     try:
 
         temp_path = await save_uploaded_document(file)
@@ -80,6 +93,7 @@ async def upload_document(
             file_path=str(temp_path),
             filename=file.filename or "unknown",
             description=x_description.strip(),
+            session_id=x_session_id.strip(),
         )
 
         logger.info(
@@ -95,7 +109,7 @@ async def upload_document(
             chunk_count=len(chunks),
         )
 
-    except HTTPException: #just for normal http exceptions can have many things eg 404,401,etc.
+    except HTTPException:
         raise
 
     except Exception:
@@ -105,7 +119,7 @@ async def upload_document(
         )
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, # 500 for sure
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Document upload failed.",
         )
 
@@ -151,6 +165,7 @@ async def query_document(
         source_count=final_state["source_count"],
         sources=final_state["sources"],
     )
+
 
 @router.get(
     "/history/{session_id}",

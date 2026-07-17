@@ -6,7 +6,9 @@ from qdrant_client.models import VectorParams
 from langchain_qdrant import QdrantVectorStore
 from src.config.settings import settings
 from src.db.qdrant import get_qdrant_client
-from src.embeddings.ollama_embeddings import get_embeddings
+from src.embeddings.hugging_face_embeddings import get_embeddings
+from qdrant_client.models import PayloadSchemaType
+
 
 def get_vector_store() -> QdrantVectorStore:
     """
@@ -18,6 +20,8 @@ def get_vector_store() -> QdrantVectorStore:
 
     client = get_qdrant_client()
     collections = client.get_collections()
+
+
 
     names = [ # eg. ["users", "books", "notes"]
         collection.name
@@ -33,6 +37,13 @@ def get_vector_store() -> QdrantVectorStore:
                 distance=Distance.COSINE,
             ),
         )
+
+   
+    client.create_payload_index( # cuz vo khudse indexing ni kr paara tha sessions_id ka toh manually bolna para krne
+    collection_name=settings.qdrant_collection,
+    field_name="metadata.session_id",
+    field_schema=PayloadSchemaType.KEYWORD,
+)
 
     return QdrantVectorStore(
         client=client,

@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 
 from src.core.logger import logger
 from src.graph.state import AdaptiveRAGState
-from src.llms.ollama_client import get_llm
+from src.llms.groq_client import get_llm
 from src.models.query_response import SourceChunk
 from src.prompts.answer import ANSWER_PROMPT
 from src.rag.query_utils import (
@@ -33,7 +33,11 @@ def retrieve_node(
     if question is None:
         question = state["question"]
 
-    retriever = get_retriever()
+    session_id = state["session_id"]
+
+    retriever = get_retriever(
+        session_id=session_id,
+    )
 
     state["documents"] = retriever.invoke(
         question,

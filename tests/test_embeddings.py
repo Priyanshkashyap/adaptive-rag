@@ -1,4 +1,4 @@
-from src.embeddings.ollama_embeddings import (get_embeddings,)
+from src.embeddings.hugging_face_embeddings import (get_embeddings,)
 
 def main() -> None:
 
