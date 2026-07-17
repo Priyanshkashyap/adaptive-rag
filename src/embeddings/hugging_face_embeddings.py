@@ -3,10 +3,10 @@ Embedding model configuration.
 """
 
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-
+from functools import lru_cache
 from src.config.settings import settings
 
-
+@lru_cache(maxsize=1)
 def get_embeddings() -> HuggingFaceEmbeddings:
     """
     Create embedding model.

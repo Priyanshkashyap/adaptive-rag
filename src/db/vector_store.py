@@ -30,13 +30,13 @@ def get_vector_store() -> QdrantVectorStore:
 
     if settings.qdrant_collection not in names: # if not in env
 
-        client.create_collection( # create new
-            collection_name=settings.qdrant_collection,
-            vectors_config=VectorParams(
-                size=768, # max 768 numbers in. a vector size
-                distance=Distance.COSINE,
-            ),
-        )
+        client.create_collection(
+        collection_name=settings.qdrant_collection,
+        vectors_config=VectorParams(
+        size=384,
+        distance=Distance.COSINE,
+    ),
+)
 
    
     client.create_payload_index( # cuz vo khudse indexing ni kr paara tha sessions_id ka toh manually bolna para krne

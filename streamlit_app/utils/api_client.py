@@ -3,9 +3,14 @@ FastAPI client utilities.
 """
 
 import requests
+import os
+import streamlit as st
+import requests
 
-
-BASE_URL = "http://127.0.0.1:8000/rag"
+BASE_URL = os.getenv(
+    "BASE_URL",
+    "http://127.0.0.1:8000/rag",
+)
 
 
 def _handle_response(
