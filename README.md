@@ -1,77 +1,105 @@
-Adaptive RAG is an AI-powered document question-answering platform that dynamically selects the best retrieval strategy based on the user's query. Instead of relying on a fixed Retrieval-Augmented Generation (RAG) pipeline, the system uses LangGraph to orchestrate multiple decision-making nodes, enabling document retrieval, query rewriting, web search fallback, and answer generation.
-Users can upload PDF or TXT documents, ask natural language questions, and receive context-aware responses with source attribution while maintaining persistent conversation history across sessions.
+# Adaptive RAG
 
-Features
-1.Upload and index PDF and TXT documents
-2.Adaptive LangGraph workflow for intelligent routing
-3.Semantic search using vector embeddings
-4.Automatic query rewriting for improved retrieval
-5.Document relevance grading
-6.Web search fallback using Tavily when documents lack sufficient context
-7.Persistent multi-session chat history using MongoDB
-8.Source attribution for generated answers
-9.Interactive Streamlit interface
-10.REST API built with FastAPI
-11.Tech Stack
-12.Category	Technologies
-13.Backend	FastAPI
-14.AI Orchestration	LangGraph
-15.LLM	Groq (Llama 3.3 70B)
-16.Embeddings	HuggingFace (BAAI/bge-small-en-v1.5)
-17.Vector Database	Qdrant
-18.Database	MongoDB Atlas
-19.Web Search	Tavily
-20.Frontend	Streamlit
+## Overview
 
+Adaptive RAG is an AI-powered document question-answering platform that dynamically selects the best retrieval strategy based on the user's query.
 
+Unlike traditional Retrieval-Augmented Generation (RAG) systems that follow a fixed pipeline, Adaptive RAG uses **LangGraph** to orchestrate multiple decision-making nodes. Depending on the query, the system can retrieve documents, rewrite the query, perform web search, and generate responses using the most appropriate workflow.
 
-Workflow
-1. Document Upload
+Users can upload PDF or TXT documents, ask natural language questions, and receive context-aware responses with source attribution while maintaining persistent conversation history across multiple sessions.
+
+---
+
+# Features
+
+- Upload and index PDF and TXT documents
+- Adaptive LangGraph workflow for intelligent routing
+- Semantic search using vector embeddings
+- Automatic query rewriting for improved retrieval
+- Document relevance grading
+- Web search fallback using Tavily when documents lack sufficient context
+- Persistent multi-session chat history using MongoDB
+- Source attribution for generated answers
+- Interactive Streamlit interface
+- REST API built with FastAPI
+
+---
+
+# Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| Backend | FastAPI |
+| AI Orchestration | LangGraph |
+| LLM | Groq (Llama 3.3 70B) |
+| Embeddings | HuggingFace (BAAI/bge-small-en-v1.5) |
+| Vector Database | Qdrant |
+| Database | MongoDB Atlas |
+| Web Search | Tavily |
+| Frontend | Streamlit |
+
+---
+
+# Workflow
+
+## 1. Document Upload
 
 Users upload PDF or TXT documents through the Streamlit interface.
 
 The ingestion pipeline:
 
-Loads the document
-Splits it into semantic chunks
-Generates embeddings
-Stores vectors in Qdrant
-Associates every chunk with a session ID
-2. User Query
+- Loads the document
+- Splits the document into semantic chunks
+- Generates embeddings
+- Stores vectors in Qdrant
+- Associates every chunk with a session ID
 
-A user asks a question.
+---
+
+## 2. User Query
+
+A user submits a question.
 
 The query is first classified into one of two categories:
 
-General knowledge question
-Document-specific question
+- General knowledge question
+- Document-specific question
 
 General questions are answered directly using the LLM.
 
-3. Semantic Retrieval
+---
+
+## 3. Semantic Retrieval
 
 For document-related questions:
 
-Relevant chunks are retrieved from Qdrant
-Retrieval is filtered using the user's session ID
-Only the user's uploaded documents are searched
-4. Document Grading
+- Relevant chunks are retrieved from Qdrant
+- Retrieval is filtered using the user's session ID
+- Only the user's uploaded documents are searched
+
+---
+
+## 4. Document Relevance Grading
 
 The retrieved context is evaluated by the LLM.
 
-If sufficient information exists:
+**If relevant:**
 
-Generate the final answer.
+- Generate the final answer.
 
-Otherwise:
+**Otherwise:**
 
-Rewrite the query.
-5. Query Rewriting
+- Rewrite the query.
+
+---
+
+## 5. Query Rewriting
 
 The system reformulates ambiguous or poorly phrased questions to improve retrieval quality.
 
 Example:
 
+```text
 Original:
 Explain this.
 
@@ -79,68 +107,89 @@ Explain this.
 
 Rewritten:
 Explain the authentication mechanism described in the uploaded document.
-6. Web Search
+```
 
-If relevant information is still unavailable,
+---
 
-the workflow automatically invokes Tavily to retrieve external information.
+## 6. Web Search
 
-The web results are combined with the document context before answer generation.
+If relevant information is still unavailable:
 
-7. Response Generation
+- Invoke Tavily Search
+- Retrieve external information
+- Combine web results with document context
 
-The LLM generates a final answer using:
+---
 
-Retrieved document context
-Web search results (if required)
-Conversation history
+## 7. Response Generation
 
-The response also includes source attribution whenever document chunks are used.
+The final answer is generated using:
 
-LangGraph Workflow
+- Retrieved document context
+- Web search results (when required)
+- Conversation history stored in MongoDB
 
-The application is implemented as a graph rather than a sequential pipeline.
+Responses also include source attribution whenever document chunks are used.
 
-Nodes include:
+---
 
-Query Classification
-Semantic Retrieval
-Document Relevance Grading
-Query Rewriting
-Web Search
-Answer Generation
+# LangGraph Workflow
 
-This adaptive architecture allows the workflow to dynamically choose the best execution path based on the query.
+The application is implemented as a graph instead of a sequential pipeline.
 
+The workflow consists of the following nodes:
 
-Installation
+- Query Classification
+- Semantic Retrieval
+- Document Relevance Grading
+- Query Rewriting
+- Web Search
+- Answer Generation
 
-Clone the repository
+This adaptive architecture dynamically selects the best execution path based on the user's query.
 
+---
+
+# Installation
+
+## Clone the Repository
+
+```bash
 git clone <repository-url>
 cd adaptive-rag
+```
 
-Create a virtual environment
+## Create a Virtual Environment
 
+```bash
 python -m venv venv
+```
 
-Activate it
+### macOS / Linux
 
-macOS/Linux
-
+```bash
 source venv/bin/activate
+```
 
-Windows
+### Windows
 
+```bash
 venv\Scripts\activate
+```
 
-Install dependencies
+## Install Dependencies
 
+```bash
 pip install -r requirements.txt
-Environment Variables
+```
 
-Create a .env file.
+---
 
+# Environment Variables
+
+Create a `.env` file in the project root.
+
+```env
 GROQ_API_KEY=your_key
 
 QDRANT_URL=your_url
@@ -151,56 +200,91 @@ MONGODB_URI=your_uri
 TAVILY_API_KEY=your_key
 
 EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
-Running the Backend
+```
+
+---
+
+# Running the Backend
+
+```bash
 uvicorn src.main:app --reload
+```
 
-API documentation
+API Documentation:
 
+```text
 http://localhost:8000/docs
-Running the Frontend
+```
+
+---
+
+# Running the Frontend
+
+```bash
 streamlit run streamlit_app/home.py
-Future Improvements
-Multi-document reasoning
-Hybrid keyword + semantic retrieval
-Support for DOCX and Markdown documents
-Streaming token generation
-User authentication and access control
-Citation highlighting within documents
-Evaluation pipeline for retrieval quality
-Key Learnings
+```
 
-Through this project, I gained hands-on experience with:
+---
 
-Building adaptive AI workflows using LangGraph
-Retrieval-Augmented Generation (RAG) architectures
-Semantic search with vector databases
-Prompt engineering and query optimization
-LLM orchestration and decision-making
-Session-aware conversational AI
-FastAPI backend development
-Streamlit frontend development
-Vector search using Qdrant
-Persistent chat history using MongoDB
-Why Adaptive RAG?
+# Future Improvements
 
-Traditional RAG systems always follow the same sequence:
+- Multi-document reasoning
+- Hybrid keyword + semantic retrieval
+- Support for DOCX and Markdown documents
+- Streaming token generation
+- User authentication and access control
+- Citation highlighting within documents
+- Evaluation pipeline for retrieval quality
 
+---
+
+# Key Learnings
+
+This project provided hands-on experience with:
+
+- Building adaptive AI workflows using LangGraph
+- Retrieval-Augmented Generation (RAG)
+- Semantic search using vector databases
+- Prompt engineering and query optimization
+- LLM orchestration and decision-making
+- Session-aware conversational AI
+- FastAPI backend development
+- Streamlit frontend development
+- Vector search with Qdrant
+- Persistent conversation history using MongoDB
+
+---
+
+# Why Adaptive RAG?
+
+### Traditional RAG
+
+```text
 Retrieve
-    ↓
+    │
+    ▼
 Generate
+```
 
-Adaptive RAG introduces intelligent decision-making:
+### Adaptive RAG
 
+```text
 Classify Query
-      ↓
+      │
+      ▼
 Retrieve Documents
-      ↓
+      │
+      ▼
 Grade Relevance
-      ↓
+      │
+      ▼
 Rewrite Query (if needed)
-      ↓
+      │
+      ▼
 Web Search (if needed)
-      ↓
+      │
+      ▼
 Generate Response
+```
 
-This enables the system to produce more reliable and context-aware responses by selecting the most appropriate retrieval strategy instead of relying on a fixed pipeline.
+Instead of following a fixed retrieval pipeline, Adaptive RAG dynamically selects the most appropriate strategy based on the user's query. This results in more accurate, context-aware, and reliable responses.
