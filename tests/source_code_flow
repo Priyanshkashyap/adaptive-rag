@@ -1,0 +1,50 @@
+```mermaid
+flowchart LR
+
+main.py --> routes.py
+
+routes.py --> upload_document()
+routes.py --> ask_question()
+
+upload_document --> ingest_documents()
+
+ingest_documents --> load_documents()
+ingest_documents --> chunk_documents()
+ingest_documents --> get_embeddings()
+ingest_documents --> store_vectors()
+
+store_vectors --> Qdrant
+
+ask_question --> graph_builder()
+
+graph_builder --> classify_node()
+
+classify_node --> general_node()
+
+classify_node --> retrieve_node()
+
+retrieve_node --> retrieve_vectors()
+
+retrieve_vectors --> Qdrant
+
+retrieve_node --> grade_node()
+
+grade_node --> generate_node()
+
+grade_node --> rewrite_node()
+
+rewrite_node --> search_node()
+
+search_node --> Tavily
+
+search_node --> generate_node()
+
+general_node --> ChatGroq
+
+generate_node --> ChatGroq
+
+ChatGroq --> Response
+
+MongoDB --> generate_node
+generate_node --> MongoDB
+```
