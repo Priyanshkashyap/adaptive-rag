@@ -1,0 +1,44 @@
+```text
+                    User Query
+                         │
+                         ▼
+                classify_node()
+                         │
+        ┌────────────────┴────────────────┐
+        │                                 │
+        ▼                                 ▼
+ General Question                 Document Question
+        │                                 │
+        ▼                                 ▼
+ general_node()                  retrieve_node()
+        │                                 │
+        ▼                                 ▼
+   ChatGroq                    retrieve_vectors()
+                                        │
+                                        ▼
+                                     Qdrant
+                                        │
+                                        ▼
+                                  grade_node()
+                           ┌─────────┴─────────┐
+                           │                   │
+                    Relevant             Not Relevant
+                           │                   │
+                           ▼                   ▼
+                  generate_node()      rewrite_node()
+                                              │
+                                              ▼
+                                        search_node()
+                                              │
+                                              ▼
+                                           Tavily
+                                              │
+                                              ▼
+                                       generate_node()
+                                              │
+                                              ▼
+                                           ChatGroq
+                                              │
+                                              ▼
+                                      Final Response
+```
