@@ -1,1 +1,37 @@
-This is a test document for Adaptive RAG.
+Adaptive RAG Project
+
+Adaptive Retrieval-Augmented Generation (Adaptive RAG) is an AI system that dynamically selects the best strategy for answering user questions.
+
+The system consists of the following components:
+
+1. LangGraph
+LangGraph orchestrates the workflow by routing queries through multiple nodes such as query classification, retrieval, grading, query rewriting, web search, and answer generation.
+
+2. Qdrant
+Qdrant is used as the vector database. Document chunks are embedded using Hugging Face embeddings and stored for semantic search.
+
+3. Groq
+Groq provides fast inference for the large language model used to generate responses.
+
+4. MongoDB
+MongoDB stores conversation history, allowing users to continue previous chats and ask follow-up questions.
+
+5. Tavily
+When relevant information cannot be found in uploaded documents, the system performs a web search using Tavily.
+
+Workflow:
+- Upload a document.
+- Split the document into chunks.
+- Generate embeddings.
+- Store embeddings in Qdrant.
+- Retrieve relevant chunks based on user queries.
+- Grade the retrieved context.
+- Rewrite the query if necessary.
+- Perform web search if document context is insufficient.
+- Generate the final answer.
+
+Benefits:
+- Accurate document understanding
+- Context-aware conversations
+- Intelligent retrieval
+- Automatic web fallback
